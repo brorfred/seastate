@@ -5,7 +5,8 @@ import pandas as pd
 import sysrsync
 
 from .tilers import rectlinear as rectlin_tiler
-from .data_sources import cmems_ssh, ostia, globcolour
+from .data_sources import cmems_ssh, ostia as ostia_sst
+from .data_sources import globcolour as cmems_globcolour
 from . import config
 settings = config.settings
 from copernicusmarine import CoordinatesOutOfDatasetBounds
@@ -17,7 +18,7 @@ def tiles_exists(id, dtm):
 
 
 
-def tile_ssh(dtm, verbose=True, force=True):
+def ssh(dtm, verbose=True, force=True):
     if tiles_exists("ssh", dtm) and not force:
         return
     rectlin_tiler.VERBOSE = verbose
@@ -45,13 +46,16 @@ def tile_ssh(dtm, verbose=True, force=True):
                              vmin=-0.75,
                              vmax=0.75)
 
-def tile_sst(dtm, verbose=True, force=True):
+def sst(dtm, verbose=True, force=True):
+    ostia(dtm, verbose, force)
+
+def ostia(dtm, verbose=True, force=True):
     if tiles_exists("ostia", dtm) and not force:
         return
     rectlin_tiler.VERBOSE = verbose
     dtm = pd.to_datetime(dtm, utc=True)
     try:
-        ds = ostia.open_dataset(dtm=dtm)
+        ds = ostia_sst.open_dataset(dtm=dtm)
     except CoordinatesOutOfDatasetBounds:
         print(f"  {dtm.date()} failed for SST")
         return
@@ -73,13 +77,13 @@ def tile_sst(dtm, verbose=True, force=True):
                              vmin=10,
                              vmax=28)
 
-def tile_globcolour(dtm, verbose=True, force=True):
+def globcolour(dtm, verbose=True, force=True):
     if tiles_exists("globcolour", dtm) and not force:
         return
     rectlin_tiler.VERBOSE = verbose
     dtm = pd.to_datetime(dtm, utc=True)
     try:
-        ds = globcolour.open_dataset(dtm=dtm)
+        ds = cmems_globcolour.open_dataset(dtm=dtm)
     except CoordinatesOutOfDatasetBounds:
         print(f"  {dtm.date()} failed for globcolour")
         return
@@ -105,11 +109,11 @@ def tile_globcolour(dtm, verbose=True, force=True):
 
 def all(dtm, verbose=False):
     print("Process SSH tiles")
-    tile_ssh(dtm, verbose=verbose, force=False)
+    ssh(dtm, verbose=verbose, force=False)
     print("Process SST tiles")
-    tile_sst(dtm, verbose=verbose, force=False)
+    sst(dtm, verbose=verbose, force=False)
     print("Process globcolour tiles")
-    tile_globcolour(dtm, verbose=verbose, force=False)
+    globcolour(dtm, verbose=verbose, force=False)
 
 def sync():
     local_tiledir = settings["tile_dir"]

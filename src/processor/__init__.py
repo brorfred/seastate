@@ -1,7 +1,7 @@
 
 import pandas as pd
 
-from . import process_day
+from . import tile
 
 #def day(dtm):
 #    processor_day.day(dtm)
@@ -16,8 +16,8 @@ def day(dtm):
 
 def today():
     dtm = pd.Timestamp.now().normalize()
-    process_day.all(dtm)
+    tile.all(dtm)
 
 def yesterday():
     dtm = pd.Timestamp.now().normalize()-pd.Timedelta(1,"D")
-    process_day.all(dtm)
+    tile.all(dtm)
