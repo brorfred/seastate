@@ -4,6 +4,7 @@ import pathlib
 
 import pandas as pd
 import sysrsync
+from jinja2 import Template
 
 from . import config
 settings = config.settings
@@ -15,12 +16,13 @@ def vprint(text):
 
 
 def sync():
-    update()
-    sysrsync.run(source="layer_config.json",
-                 destination="/var/www/html/cruise/",
-                 destination_ssh='tvarminne',
-                 options=['-az'],
-                 sync_source_contents=True,
+    tmp_dir = pathlib.Path("/tmp")
+    generate_file(config_file_path=tmp_dir)
+    update(json_file_path=tmp_dir / "layer_config.json")
+    sysrsync.run(source=str(tmp_dir / "layer_config.json"),
+                 destination=settings.get("remote_html_dir"),
+                 destination_ssh=settings.get("remote_server"),
+                 options=['-azv'],
                  strict=True,
                  )
 
@@ -34,8 +36,10 @@ def find_first_last_tile_dates():
         layer_name = layer.name
         date_range = pd.to_datetime([d.name for d in layer.glob("*")])
         vprint(date_range)
-        layer_dates[layer.name] = dict(start=date_range.min().date(),
-                                       end=date_range.max().date())
+        dtm1 = date_range.min()
+        dtm2 = date_range.max()
+        ddtm = pd.Timedelta(min((dtm2-dtm1).days, settings.get("max_tile_days")-1), "D")
+        layer_dates[layer.name] = dict(start=(dtm2 - ddtm).date(), end=dtm2.date())
     return layer_dates
 
 def update(json_file_path="layer_config.json"):
@@ -124,49 +128,76 @@ def update_date_ranges(json_file_path, layer_dates=None, output_file_path=None):
     with open(output_path, 'w') as f:
         json.dump(data, f, indent=2)
 
+def generate_file(remote_tile_url=None, config_file_path="./"):
+    """
+    Generate a JSON configuration file for map layers.
 
-def generate_file(path="./"):
-    payload = """
-    {
-      "base_url": "https://monhegan.unh.edu/cruise/tiles/bioreactors1",
-      "layers": [
+    Args:
+        remote_tile_url: The base URL for the tile server
+        config_file_path: Directory path where the file will be saved (default: "./")
+    """
+    base_url = settings.get("remote_url")+"/tiles/"+settings.get("cruise_name")
+    base_url = remote_tile_url or base_url
+    # Define layer configurations
+    layers_config = [
         {
-          "id": "ssh",
-          "name": "SSH CMEMS 0.125\u00b0  ",
-          "url_template": "{base_url}/ssh/{date}/{z}/{x}/{y}.png",
-          "attribution": "Copernicus 1/125\u00b0 SSH -0.75\u20130.75 m",
-          "date_range": {
-            "start": "2026-01-08",
-            "end": "2026-01-14"
-          },
-          "exclusive": false,
-          "collapsed": false
+            "id": "ssh",
+            "name": "SSH CMEMS 0.125°  ",
+            "url_path": "ssh",
+            "attribution": "Copernicus 1/125° SSH -0.75–0.75 m",
         },
         {
-          "id": "ostia",
-          "name": "SST OSTIA 5km     ",
-          "url_template": "{base_url}/ostia/{date}/{z}/{x}/{y}.png",
-          "attribution": "OSTIA 2km SST 10\u201328\u00b0C",
-          "date_range": {
-            "start": "2026-01-08",
-            "end": "2026-01-14"
-          },
-          "exclusive": false,
-          "collapsed": false
+            "id": "ostia",
+            "name": "SST OSTIA 5km     ",
+            "url_path": "ostia",
+            "attribution": "OSTIA 2km SST 10–28°C",
         },
         {
-          "id": "globcolour",
-          "name": "Chl GlobColour 4km",
-          "url_template": "{base_url}/globcolour/{date}/{z}/{x}/{y}.png",
-          "attribution": "Globcolour 4km Chl 0.01-100 mg/m3",
-          "date_range": {
+            "id": "globcolour",
+            "name": "Chl GlobColour 4km",
+            "url_path": "globcolour",
+            "attribution": "Globcolour 4km Chl 0.01-100 mg/m3",
+        },
+    ]
+
+    # Common settings for all layers
+    common_settings = {
+        "date_range": {
             "start": "2026-01-08",
             "end": "2026-01-14"
-          },
-          "exclusive": false,
-          "collapsed": false
+        },
+        "exclusive": False,
+        "collapsed": False
+    }
+
+    # Build complete layer objects
+    layers = []
+    for layer in layers_config:
+        layer_obj = {
+            "id": layer["id"],
+            "name": layer["name"],
+            "url_template": f"{{base_url}}/{layer['url_path']}/{{date}}/{{z}}/{{x}}/{{y}}.png",
+            "attribution": layer["attribution"],
+            **common_settings
         }
-      ]
-    }"""
-    with open(pathlib.Path(path) / "layer_config.json", "w") as fp:
-        fp.write(payload)
+        layers.append(layer_obj)
+
+    # Jinja2 template for the JSON structure
+    template_str = """
+{
+  "base_url": "{{ base_url }}",
+  "layers": {{ layers | tojson(indent=4) }}
+}"""
+
+    template = Template(template_str)
+
+    # Render the template
+    rendered = template.render(
+        base_url=base_url,
+        layers=layers
+    )
+
+    # Write to file
+    output_path = pathlib.Path(config_file_path) / "layer_config.json"
+    with open(output_path, "w") as fp:
+        fp.write(rendered)
