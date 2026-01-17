@@ -1,20 +1,14 @@
-"""OSTIA Sea Surface Temperature data access.
+"""GlobColour chlorophyll data access.
 
-This module provides functions to retrieve and access OSTIA
-(Operational Sea Surface Temperature and Ice Analysis) data
-from the Copernicus Marine Service.
+This module provides functions to retrieve and access GlobColour merged
+chlorophyll-a concentration data from the Copernicus Marine Service.
 
 References
 ----------
 DOI: https://doi.org/10.48670/moi-00165
-Product: https://data.marine.copernicus.eu/product/SST_GLO_SST_L4_NRT_OBSERVATIONS_010_001/description
+Product: https://data.marine.copernicus.eu/product/OCEANCOLOUR_GLO_BGC_L3_NRT_009_101/description
 """
-import os
-import glob
 import pathlib
-import shutil
-import zipfile
-from concurrent.futures import ThreadPoolExecutor
 import copernicusmarine
 
 import pandas as pd
@@ -23,13 +17,15 @@ import xarray as xr
 import copernicusmarine
 from satpy import Scene
 
-from processor.area_definitions import rectlinear as rectlin_area
-from processor import config
+from seastate.area_definitions import rectlinear as rectlin_area
+from seastate import config
 settings = config.settings
 
-DATADIR = pathlib.Path(settings["data_dir"] + "/copernicus/OSTIA")
+DATADIR = pathlib.Path(settings["data_dir"] + "/copernicus/GlobColour")
 DATADIR.mkdir(parents=True, exist_ok=True)
 
+DATASET_ID = "cmems_obs-oc_glo_bgc-plankton_nrt_l3-multi-4km_P1D"
+filename_prefix = "GLOBCOLOUR"
 
 VERBOSE = True
 
@@ -47,7 +43,7 @@ def vprint(text):
 
 
 def filename(dtm="2025-06-03"):
-    """Generate filename for OSTIA data file.
+    """Generate filename for GlobColour data file.
 
     Parameters
     ----------
@@ -57,14 +53,14 @@ def filename(dtm="2025-06-03"):
     Returns
     -------
     str
-        Filename in format 'copernicus_OSTIA_YYYY-MM-DD.nc'.
+        Filename in format 'copernicus_GLOBCOLOUR_YYYY-MM-DD.nc'.
     """
     dtm = pd.to_datetime(dtm)
-    return f"copernicus_OSTIA_{dtm.date()}.nc"
+    return f"copernicus_{filename_prefix}_{dtm.date()}.nc"
 
 
 def open_dataset(dtm="2025-06-03", force=False):
-    """Open OSTIA SST dataset for a given date.
+    """Open GlobColour chlorophyll dataset for a given date.
 
     Downloads the data if not already cached locally.
 
@@ -78,7 +74,7 @@ def open_dataset(dtm="2025-06-03", force=False):
     Returns
     -------
     xarray.Dataset
-        Dataset containing SST variables.
+        Dataset containing chlorophyll concentration (CHL).
     """
     fn = DATADIR / filename(dtm=dtm)
     if not fn.is_file():
@@ -87,7 +83,7 @@ def open_dataset(dtm="2025-06-03", force=False):
 
 
 def open_scene(dtm="2025-06-03", data_var="sla"):
-    """Open OSTIA data as a Satpy Scene.
+    """Open GlobColour data as a Satpy Scene.
 
     Parameters
     ----------
@@ -111,7 +107,7 @@ def open_scene(dtm="2025-06-03", data_var="sla"):
 
 
 def retrieve(dtm="2025-06-03", force=False, parallel=True):
-    """Retrieve OSTIA SST data from Copernicus Marine Service.
+    """Retrieve GlobColour data from Copernicus Marine Service.
 
     Parameters
     ----------
@@ -127,7 +123,7 @@ def retrieve(dtm="2025-06-03", force=False, parallel=True):
     elif force:
         (DATADIR / filename(dtm)).unlink(missing_ok=True)
     dtm = pd.to_datetime(dtm, utc=True)
-    vprint(f"Date: {dtm.date()} \nCollection: Sea Surface Temperature")
+    vprint(f"Date: {dtm.date()} \nCollection: GlobColour Chl 4km")
 
     # Define the time and space domains
     dtstart = dtm.normalize().to_pydatetime()
@@ -137,7 +133,7 @@ def retrieve(dtm="2025-06-03", force=False, parallel=True):
 
     copernicusmarine.subset(
         #dataset_id="cmems_mod_glo_phy_my_0.083deg_P1D-m",
-        dataset_id="METOFFICE-GLO-SST-L4-NRT-OBS-SST-V2",
+        dataset_id=DATASET_ID,
         username = settings.get("cmems_login"),
         password = settings.get("cmems_password"),
         #variables=["uo", "vo"],

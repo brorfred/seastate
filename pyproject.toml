@@ -3,7 +3,7 @@ requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "processor"
+name = "seastate"
 version = "0.1.0"
 description = "Cruise support package for generating oceanographic map tiles"
 readme = "README.md"
@@ -63,10 +63,10 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/brorfred/cruise"
-Documentation = "https://github.com/brorfred/cruise#readme"
-Repository = "https://github.com/brorfred/cruise.git"
-Issues = "https://github.com/brorfred/cruise/issues"
+Homepage = "https://github.com/brorfred/seastate"
+Documentation = "https://github.com/brorfred/seastate#readme"
+Repository = "https://github.com/brorfred/seastate.git"
+Issues = "https://github.com/brorfred/seastate/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]

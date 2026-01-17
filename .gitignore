@@ -11,3 +11,6 @@ slask
 
 # Ignore dynaconf secret files
 .secrets.*
+
+# MkDocs build output
+site/

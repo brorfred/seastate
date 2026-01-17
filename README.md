@@ -1,4 +1,4 @@
-# Cruise Support Processor
+# _seastate_ a cruise Support Processor
 
 A Python package for generating slippy map tiles from oceanographic satellite data for research cruise support. The processor retrieves near-real-time (NRT) data from Copernicus Marine Service and generates web-ready map tiles for visualization.
 
@@ -21,8 +21,8 @@ A Python package for generating slippy map tiles from oceanographic satellite da
 
 ```bash
 # Clone the repository
-git clone https://github.com/brorfred/cruise.git
-cd cruise
+git clone https://github.com/brorfred/seastate.git
+cd seastate
 
 # Create virtual environment and install
 uv venv
@@ -33,8 +33,8 @@ uv pip install -e ".[dev]"
 ### Using pip
 
 ```bash
-git clone https://github.com/brorfred/cruise.git
-cd cruise
+git clone https://github.com/brorfred/seastate.git
+cd seastate
 pip install -e ".[dev]"
 ```
 
@@ -43,8 +43,8 @@ pip install -e ".[dev]"
 This project also supports [pixi](https://pixi.sh) for conda-based dependency management (recommended for complex geospatial dependencies).
 
 ```bash
-git clone https://github.com/brorfred/cruise.git
-cd cruise
+git clone https://github.com/brorfred/seastate.git
+cd seastate
 pixi install
 ```
 
@@ -106,7 +106,7 @@ Environment variables prefixed with `SEASTATE_` will override settings.
 ## Project Structure
 
 ```
-cruise/
+seastate/
 ├── src/processor/
 │   ├── __init__.py
 │   ├── config.py              # Dynaconf settings loader
