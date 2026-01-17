@@ -72,6 +72,8 @@ def retrieve(dtm="2025-06-03", force=False, parallel=True):
     copernicusmarine.subset(
         #dataset_id="cmems_mod_glo_phy_my_0.083deg_P1D-m",
         dataset_id=DATASET_ID,
+        username = settings.get("cmems_login"),
+        password = settings.get("cmems_password"),
         #variables=["uo", "vo"],
         minimum_longitude=settings["lon1"],
         maximum_longitude=settings["lon2"],
