@@ -17,6 +17,8 @@ from PIL import Image
 import mercantile
 import io
 
+from .utils import filter_small_contours
+
 VERBOSE = True
 
 
@@ -140,7 +142,8 @@ class SlippyTileGenerator:
                       scene_lons: np.ndarray, output_dir: str, zoom_levels: list,
                       num_workers: int = 10, cmap: str = 'RdBu',
                       levels: int = 20, vmin: Optional[float] = None,
-                      vmax: Optional[float] = None):
+                      vmax: Optional[float] = None,
+                      add_contour_lines: bool = False, contour_levels: int = 5):
         """Generate tiles for multiple zoom levels in parallel.
 
         Parameters
@@ -236,7 +239,8 @@ class SlippyTileGenerator:
                         self._generate_single_tile,
                         tile.z, tile.x, tile.y,
                         lats_flat, lons_flat, data_flat,
-                        str(output_path), cmap, levels, vmin, vmax
+                        str(output_path), cmap, levels, vmin, vmax,
+                        add_contour_lines, contour_levels
                     ): (tile.x, tile.y) for tile in tiles
                 }
 
@@ -258,7 +262,8 @@ class SlippyTileGenerator:
     def _generate_single_tile(zoom: int, x: int, y: int,
                              lats: np.ndarray, lons: np.ndarray, data: np.ndarray,
                              output_dir: str, cmap: str, levels: int,
-                             vmin: float, vmax: float):
+                             vmin: float, vmax: float,
+                             add_contour_lines: bool, contour_levels: int):
         """Generate a single tile (called in parallel).
 
         Parameters
@@ -357,10 +362,19 @@ class SlippyTileGenerator:
             mask = areas > 3 * median_area
             triang.set_mask(mask)
 
-            contour_levels = np.linspace(vmin, vmax, levels)
-            ax.tricontourf(triang, tile_data, levels=contour_levels,
+            if not np.iterable(levels):
+                levels = np.linspace(vmin, vmax, levels)
+            ax.tricontourf(triang, tile_data, levels=levels,
                           cmap=cmap, vmin=vmin, vmax=vmax, extend='both')
-        except Exception:
+            if add_contour_lines and (zoom>4):
+                vprint("Drawing contour lines")
+                cs = ax.tricontour(triang, tile_data, levels=contour_levels,
+                    colors="0.7", linewidths=0.5, linestyles="solid", alpha=0.5)
+                filter_small_contours(cs, 100)
+                ax.clabel(cs, inline=True, fontsize=8, fmt='%.0f')
+        except RuntimeError as e:
+            if not "Error in qhull Delaunay triangulation" in str(e):
+                vprint(e)
             # If triangulation fails, create empty tile
             plt.close(fig)
             img = Image.new('RGBA', (SlippyTileGenerator.TILE_SIZE,
@@ -384,3 +398,42 @@ class SlippyTileGenerator:
                          SlippyTileGenerator.TILE_SIZE), Image.LANCZOS)
         img.save(tile_path)
         buf.close()
+
+
+def cruise_tiles(da, tile_base, cmap="viridis", levels=None, vmin=None, vmax=None, verbose=True):
+    """Generate slippy map tiles from an xarray DataArray.
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        DataArray with latitude and longitude coordinates.
+    tile_base : str
+        Base output directory for generated tiles.
+    cmap : str, optional
+        Matplotlib colormap name, by default "viridis".
+    levels : int or list, optional
+        Number of contour levels or list of level values. If None, auto-calculated.
+    vmin : float, optional
+        Minimum value for colormap. If None, auto-calculated from data.
+    vmax : float, optional
+        Maximum value for colormap. If None, auto-calculated from data.
+    verbose : bool, optional
+        Whether to print progress messages, by default True.
+    """
+    global VERBOSE
+    VERBOSE = verbose
+    generator = SlippyTileGenerator(
+        min_lat=float(da.latitude.min()),
+        max_lat=float(da.latitude.max()),
+        min_lon=float(da.longitude.min()),
+        max_lon=float(da.longitude.max())
+    )
+    generator.generate_tiles(np.squeeze(da.data),
+                             da.latitude.data,
+                             da.longitude.data,
+                             tile_base,
+                             settings["zoom_levels"],
+                             cmap=cmap,
+                             levels=levels,
+                             vmin=vmin,
+                             vmax=vmax)
