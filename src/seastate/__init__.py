@@ -43,6 +43,8 @@ def today(force=False):
     tile.all(dtm, force=force)
     if config.settings.get("remote_sync"):
         tile.sync()
+        layer_config.sync()
+
 
 
 def yesterday(force=False):

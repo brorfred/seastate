@@ -13,10 +13,11 @@ import sysrsync
 from .tilers import rectlinear as rectlin_tiler
 from .data_sources import cmems_ssh, ostia as ostia_sst
 from .data_sources import globcolour as cmems_globcolour
+from .data_sources import gebco_bathy
 from . import config
 settings = config.settings
 from copernicusmarine import CoordinatesOutOfDatasetBounds
-
+import cmasher as cmr
 
 def tiles_exists(id, dtm):
     """Check if tiles already exist for a given product and date.
@@ -36,6 +37,43 @@ def tiles_exists(id, dtm):
     dtm = str(pd.to_datetime(dtm).date())
     tilepath = pathlib.Path(settings["tile_dir"]) / id / dtm
     return tilepath.is_dir()
+
+def bathy(dtm=None, verbose=True, force=True):
+    """Generate SSH (Sea Surface Height) tiles for a given date.
+
+    Parameters
+    ----------
+    dtm : str or datetime-like
+        The date to generate tiles for.
+    verbose : bool, optional
+        Enable verbose output, by default True.
+    force : bool, optional
+        Force regeneration even if tiles exist, by default True.
+    """
+    tile_base = pathlib.Path(settings["tile_dir"]) / "gebco"
+    if tile_base.is_dir() and not force:
+        return
+    ds = gebco_bathy.open_dataset(dtm=dtm)
+    tile_base.mkdir(parents=True, exist_ok=True)
+
+    rectlin_tiler.VERBOSE = verbose
+    generator = rectlin_tiler.SlippyTileGenerator(
+        min_lat=float(ds.latitude.min()),
+        max_lat=float(ds.latitude.max()),
+        min_lon=float(ds.longitude.min()),
+        max_lon=float(ds.longitude.max())
+    )
+    generator.generate_tiles(np.squeeze(ds["elevation"].data),
+                             ds.latitude.data,
+                             ds.longitude.data,
+                             tile_base,
+                             settings["zoom_levels"],
+                             cmap=cmr.ocean,
+                             levels=np.arange(-6000,100,100),
+                             vmin=-6000,
+                             vmax=0,
+                             add_contour_lines=True,
+                             contour_levels=np.arange(-6000,0,500))
 
 
 def ssh(dtm, verbose=True, force=True):
@@ -182,7 +220,7 @@ def globcolour(dtm, verbose=True, force=True):
                              levels=50)
 
 
-def all(dtm, verbose=False):
+def all(dtm, force=False, verbose=False):
     """Generate all tile products for a given date.
 
     Generates SSH, SST, and GlobColour tiles. Does not regenerate
@@ -196,11 +234,11 @@ def all(dtm, verbose=False):
         Enable verbose output, by default False.
     """
     print("Process SSH tiles")
-    ssh(dtm, verbose=verbose, force=False)
+    ssh(dtm, verbose=verbose, force=force)
     print("Process SST tiles")
-    sst(dtm, verbose=verbose, force=False)
+    sst(dtm, verbose=verbose, force=force)
     print("Process globcolour tiles")
-    globcolour(dtm, verbose=verbose, force=False)
+    globcolour(dtm, verbose=verbose, force=force)
 
 
 def sync():
