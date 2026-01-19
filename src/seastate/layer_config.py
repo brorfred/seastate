@@ -62,9 +62,9 @@ def find_first_last_tile_dates():
     tilepath = pathlib.Path(settings["tile_dir"])
     vprint(tilepath)
     layer_dates = dict()
-    for layer in tilepath.glob("*"):
+    for layer_name in settings.get("updated_tiles"):
+        layer = tilepath / layer_name
         vprint(layer)
-        layer_name = layer.name
         date_range = pd.to_datetime([d.name for d in layer.glob("*")])
         vprint(date_range)
         dtm1 = date_range.min()

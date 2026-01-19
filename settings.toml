@@ -1,0 +1,39 @@
+
+[DEFAULT]
+base_tile_dir = "/data/slow/web_share/cruise/tiles/"
+base_data_dir = "/data/raid/cruise_support/"
+remote_html_dir = "/var/www/html/cruise/"
+remote_server = "tvarminne"
+remote_sync = true
+remote_url = "https://cruise.bror.co/"
+max_tile_days = 8
+updated_tiles = ["globcolour",  "ostia", "ssh"]
+#
+# --- Cruise Specific Information ---
+#
+cruise_name = "bioreactors1"
+lat1 = -55
+lat2 = -10
+lon1 = -75
+lon2 = -5
+zoom_levels = [0,1,2,3,4,5,6,7,8,9]
+#
+# --- Directories for data ---
+#
+data_dir = "@format {this.base_data_dir}/{this.cruise_name}"
+tile_dir = "@format {this.base_tile_dir}/{this.cruise_name}"
+remote_tile_dir = "@format {this.remote_html_dir}/tiles/{this.cruise_name}"
+
+[OMI]
+cruise_name = "OceanMargins"
+lat1 = -10
+lat2 =  10
+lon1 = -10
+lon2 =  10
+zoom_levels = [0,1,2,3,4,5,6,7,8,9,10]
+#
+# --- Directories for data ---
+#
+data_dir = "@format {this.base_data_dir}/{this.cruise_name}"
+tile_dir = "@format {this.base_tile_dir}/{this.cruise_name}"
+remote_tile_dir = "@format {this.remote_html_dir}/tiles/{this.cruise_name}"
