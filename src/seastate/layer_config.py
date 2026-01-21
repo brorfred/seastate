@@ -38,12 +38,17 @@ def sync():
     tmp_dir = pathlib.Path("/tmp")
     generate_file(config_file_path=tmp_dir)
     update(json_file_path=tmp_dir / "layer_config.json")
-    sysrsync.run(source=str(tmp_dir / "layer_config.json"),
+    payload = dict(source=str(tmp_dir / "layer_config.json"),
                  destination=settings.get("remote_html_dir"),
                  destination_ssh=settings.get("remote_server"),
-                 options=['-azv'],
-                 strict=True,
-                 )
+                 options=['-az'],
+                 strict=True,)
+    sysrsync.run(**payload)
+    payload["destination"] = payload["destination"] + "/devel/"
+    sysrsync.run(**payload)
+
+
+    #dtm = pd.Timestamp.now().isoformat().split(".")[0]
 
 
 def find_first_last_tile_dates():
