@@ -1,4 +1,4 @@
-"""Tests for the seastate.layer_config module."""
+"""Tests for the seaview.layer_config module."""
 
 import json
 import tempfile
@@ -8,7 +8,7 @@ from unittest.mock import patch, MagicMock
 import pandas as pd
 import pytest
 
-from seastate import layer_config
+from seaview import layer_config
 
 
 class TestGenerateFile:

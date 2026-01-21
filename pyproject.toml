@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 
 [project]
-name = "seastate"
+name = "seaview"
 version = "0.1.0"
 description = "Cruise support package for generating oceanographic map tiles"
 readme = "README.md"
@@ -70,13 +70,13 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/brorfred/seastate"
-Documentation = "https://github.com/brorfred/seastate#readme"
-Repository = "https://github.com/brorfred/seastate.git"
-Issues = "https://github.com/brorfred/seastate/issues"
+Homepage = "https://github.com/brorfred/seaview"
+Documentation = "https://github.com/brorfred/seaview#readme"
+Repository = "https://github.com/brorfred/seaview.git"
+Issues = "https://github.com/brorfred/seaview/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/seastate"]
+packages = ["src/seaview"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -85,16 +85,16 @@ python_functions = ["test_*"]
 addopts = "-v --tb=short"
 
 [tool.uv.sources]
-seastate = { workspace = true }
+seaview = { workspace = true }
 
 [dependency-groups]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "ipython>=8.0.0",
-    "seastate",
+    "seaview",
 ]
 
 [project.scripts]
-sea = "seastate.cli2:app"
-sea-update = "seastate.cli2:update"
+sea = "seaview.cli2:app"
+sea-update = "seaview.cli2:update"

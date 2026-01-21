@@ -1,4 +1,4 @@
-"""Command-line interface for the seastate processor.
+"""Command-line interface for the seaview processor.
 
 This module provides CLI commands for generating and managing oceanographic
 map tiles using the Typer framework.
@@ -7,7 +7,7 @@ import typer
 from typing import Annotated
 
 
-import seastate
+import seaview
 
 app = typer.Typer()
 
@@ -20,10 +20,10 @@ def update(
     """Update tiles with yesterday's and today's fields."""
 
     if env.lower() != "default":
-        seastate.config.change_env(env)
+        seaview.config.change_env(env)
         typer.echo(f"Using environment: {env}")
-    seastate.today(force=False, sync=False)
-    seastate.yesterday(force=True, sync=sync)
+    seaview.today(force=False, sync=False)
+    seaview.yesterday(force=True, sync=sync)
 
 
 @app.callback()

@@ -1,4 +1,4 @@
-"""Tests for the seastate.tile module."""
+"""Tests for the seaview.tile module."""
 
 import tempfile
 from pathlib import Path
@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from seastate import tile
+from seaview import tile
 
 
 class TestTilesExists:

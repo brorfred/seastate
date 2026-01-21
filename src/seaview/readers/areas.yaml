@@ -1,0 +1,18 @@
+webmercator_global:
+    description: Global Web Mercator (EPSG:3857)
+    projection:
+        proj: merc
+        a: 6378137.0
+        b: 6378137.0
+        lat_ts: 0.0
+        lon_0: 0.0
+        x_0: 0.0
+        y_0: 0.0
+        units: m
+        no_defs: true
+    shape:
+        height: 4096
+        width: 4096
+    area_extent:
+        lower_left_xy: [-20037508.342789244, -20037508.342789244]
+        upper_right_xy: [20037508.342789244, 20037508.342789244]

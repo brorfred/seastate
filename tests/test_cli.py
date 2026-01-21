@@ -1,11 +1,11 @@
-"""Tests for the seastate.cli module."""
+"""Tests for the seaview.cli module."""
 
 from unittest.mock import patch, MagicMock
 
 import pytest
 from typer.testing import CliRunner
 
-from seastate.cli import app
+from seaview.cli import app
 
 
 runner = CliRunner()
@@ -14,7 +14,7 @@ runner = CliRunner()
 class TestUpdateCommand:
     """Tests for the update CLI command."""
 
-    @patch('seastate.config.change_env')
+    @patch('seaview.config.change_env')
     def test_changes_env_when_not_default(self, mock_change_env):
         """update command should change environment when env is not DEFAULT."""
         result = runner.invoke(app, ["update", "--env", "production", "--no-sync"])
@@ -23,7 +23,7 @@ class TestUpdateCommand:
         mock_change_env.assert_called_once_with("production")
         assert result.exit_code == 0
 
-    @patch('seastate.config.change_env')
+    @patch('seaview.config.change_env')
     def test_skips_env_change_for_default(self, mock_change_env):
         """update command should not change environment for DEFAULT."""
         result = runner.invoke(app, ["update", "--env", "DEFAULT", "--no-sync"])

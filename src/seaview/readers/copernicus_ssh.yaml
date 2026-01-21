@@ -1,0 +1,113 @@
+# SatPy Reader Configuration for Copernicus Marine Service SSH Data
+# This reader handles gridded Sea Surface Height data from altimetry
+
+reader:
+    name: copernicus_ssh
+    short_name: Copernicus SSH
+    long_name: Copernicus Marine Service - Sea Surface Height
+    description: >
+        Reader for Copernicus Marine Service Sea Surface Height (SSH) NetCDF files
+        derived from satellite altimetry measurements. Supports gridded data products
+        including absolute dynamic topography, sea level anomaly, and geostrophic
+        velocity fields.
+    status: Beta
+    supports_fsspec: false
+    sensors: [altimeter]
+    reader: !!python/name:satpy.readers.core.yaml_reader.FileYAMLReader
+
+file_types:
+    copernicus_ssh_nc:
+        file_reader: !!python/name:satpy.readers.copernicus_ssh.CopernicusSSHFileHandler
+        file_patterns: ["copernicus_SSH_{start_time:%Y-%m-%d}.nc"]
+
+# Common dataset properties
+_common_properties: &common_props
+    resolution: 12500 # ~0.125 degrees
+    file_type: copernicus_ssh_nc
+    coordinates: [longitude, latitude]
+
+datasets:
+    # Coordinate variables
+    longitude:
+        name: longitude
+        resolution: 12500
+        file_type: copernicus_ssh_nc
+        standard_name: longitude
+        units: degrees_east
+
+    latitude:
+        name: latitude
+        resolution: 12500
+        file_type: copernicus_ssh_nc
+        standard_name: latitude
+        units: degrees_north
+
+    # Sea Surface Height variables
+    adt:
+        <<: *common_props
+        name: adt
+        standard_name: absolute_dynamic_topography
+        long_name: Absolute Dynamic Topography
+        units: m
+
+    sla:
+        <<: *common_props
+        name: sla
+        standard_name: sea_level_anomaly
+        long_name: Sea Level Anomaly
+        units: m
+
+    # Geostrophic Velocity - Absolute
+    ugos:
+        <<: *common_props
+        name: ugos
+        standard_name: surface_geostrophic_eastward_sea_water_velocity
+        long_name: Absolute Geostrophic Velocity (Zonal)
+        units: m/s
+
+    vgos:
+        <<: *common_props
+        name: vgos
+        standard_name: surface_geostrophic_northward_sea_water_velocity
+        long_name: Absolute Geostrophic Velocity (Meridional)
+        units: m/s
+
+    # Geostrophic Velocity - Anomaly
+    ugosa:
+        <<: *common_props
+        name: ugosa
+        standard_name: surface_geostrophic_eastward_sea_water_velocity_assuming_sea_level_for_geoid
+        long_name: Geostrophic Velocity Anomaly (Zonal)
+        units: m/s
+
+    vgosa:
+        <<: *common_props
+        name: vgosa
+        standard_name: surface_geostrophic_northward_sea_water_velocity_assuming_sea_level_for_geoid
+        long_name: Geostrophic Velocity Anomaly (Meridional)
+        units: m/s
+
+    # Error/Uncertainty variables
+    err_sla:
+        <<: *common_props
+        name: err_sla
+        long_name: Sea Level Anomaly Error
+        units: m
+
+    err_ugosa:
+        <<: *common_props
+        name: err_ugosa
+        long_name: Geostrophic Velocity Anomaly Error (Zonal)
+        units: m/s
+
+    err_vgosa:
+        <<: *common_props
+        name: err_vgosa
+        long_name: Geostrophic Velocity Anomaly Error (Meridional)
+        units: m/s
+
+    # Quality flags
+    flag_ice:
+        <<: *common_props
+        name: flag_ice
+        long_name: Ice Flag

@@ -1,4 +1,4 @@
-"""Tests for the seastate.data_sources modules."""
+"""Tests for the seaview.data_sources modules."""
 
 import tempfile
 from pathlib import Path
@@ -9,7 +9,7 @@ import pytest
 import xarray as xr
 import numpy as np
 
-from seastate.data_sources import cmems_ssh, ostia, globcolour, gebco_bathy
+from seaview.data_sources import cmems_ssh, ostia, globcolour, gebco_bathy
 
 
 class TestCmemsSSH:

@@ -1,4 +1,4 @@
-"""Tests for the seastate.tilers.utils module."""
+"""Tests for the seaview.tilers.utils module."""
 
 import numpy as np
 import pytest
@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib import tri
 from matplotlib.path import Path
 
-from seastate.tilers.utils import filter_small_contours
+from seaview.tilers.utils import filter_small_contours
 
 
 class TestFilterSmallContours:

@@ -1,4 +1,4 @@
-"""Shared pytest fixtures for seastate tests."""
+"""Shared pytest fixtures for seaview tests."""
 
 import tempfile
 from pathlib import Path

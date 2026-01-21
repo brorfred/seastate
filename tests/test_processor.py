@@ -1,4 +1,4 @@
-"""Tests for the seastate package."""
+"""Tests for the seaview package."""
 
 import math
 import tempfile
@@ -8,9 +8,9 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from seastate import config
-from seastate import area_definitions
-from seastate.tilers.rectlinear import SlippyTileGenerator
+from seaview import config
+from seaview import area_definitions
+from seaview.tilers.rectlinear import SlippyTileGenerator
 
 
 class TestConfig:
