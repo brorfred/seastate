@@ -1,4 +1,4 @@
-"""Tests for the src/processor module."""
+"""Tests for the seastate package."""
 
 import math
 import tempfile
@@ -8,22 +8,22 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from src.processor import config
-from src.processor import area_definitions
-from src.processor.tilers.rectlinear import SlippyTileGenerator
+from seastate import config
+from seastate import area_definitions
+from seastate.tilers.rectlinear import SlippyTileGenerator
 
 
 class TestConfig:
     """Tests for config.py."""
 
-    def test_settings_returns_dict(self):
-        """settings() should return a dictionary."""
-        result = config.settings()
-        assert isinstance(result, dict)
+    def test_settings_is_dynaconf_object(self):
+        """settings should be a Dynaconf object that supports dict-like access."""
+        # Should support dict-style access
+        assert hasattr(config.settings, '__getitem__')
+        assert hasattr(config.settings, 'get')
 
     def test_settings_has_required_keys(self):
-        """settings() should contain all required configuration keys."""
-        result = config.settings()
+        """settings should contain all required configuration keys."""
         required_keys = [
             "cruise_name",
             "lat1",
@@ -37,46 +37,46 @@ class TestConfig:
             "zoom_levels",
         ]
         for key in required_keys:
-            assert key in result, f"Missing required key: {key}"
+            assert config.settings.get(key) is not None, f"Missing required key: {key}"
 
     def test_settings_lat_lon_are_numbers(self):
         """Lat/lon bounds should be numeric."""
-        result = config.settings()
-        assert isinstance(result["lat1"], (int, float))
-        assert isinstance(result["lat2"], (int, float))
-        assert isinstance(result["lon1"], (int, float))
-        assert isinstance(result["lon2"], (int, float))
+        assert isinstance(config.settings["lat1"], (int, float))
+        assert isinstance(config.settings["lat2"], (int, float))
+        assert isinstance(config.settings["lon1"], (int, float))
+        assert isinstance(config.settings["lon2"], (int, float))
 
     def test_settings_lat_bounds_valid(self):
         """Latitude bounds should be in valid range [-90, 90]."""
-        result = config.settings()
-        assert -90 <= result["lat1"] <= 90
-        assert -90 <= result["lat2"] <= 90
-        assert result["lat1"] < result["lat2"], "lat1 should be less than lat2"
+        assert -90 <= config.settings["lat1"] <= 90
+        assert -90 <= config.settings["lat2"] <= 90
+        assert config.settings["lat1"] < config.settings["lat2"], "lat1 should be less than lat2"
 
     def test_settings_lon_bounds_valid(self):
         """Longitude bounds should be in valid range [-180, 180]."""
-        result = config.settings()
-        assert -180 <= result["lon1"] <= 180
-        assert -180 <= result["lon2"] <= 180
-        assert result["lon1"] < result["lon2"], "lon1 should be less than lon2"
+        assert -180 <= config.settings["lon1"] <= 180
+        assert -180 <= config.settings["lon2"] <= 180
+        assert config.settings["lon1"] < config.settings["lon2"], "lon1 should be less than lon2"
 
     def test_settings_zoom_levels_list(self):
         """zoom_levels should be a list of integers."""
-        result = config.settings()
-        assert isinstance(result["zoom_levels"], list)
-        assert len(result["zoom_levels"]) > 0
-        for zoom in result["zoom_levels"]:
+        zoom_levels = config.settings["zoom_levels"]
+        assert isinstance(zoom_levels, list)
+        assert len(zoom_levels) > 0
+        for zoom in zoom_levels:
             assert isinstance(zoom, int)
             assert 0 <= zoom <= 20, "Zoom level should be between 0 and 20"
 
     def test_settings_paths_are_strings(self):
         """Directory paths should be strings."""
-        result = config.settings()
-        assert isinstance(result["tile_dir"], str)
-        assert isinstance(result["data_dir"], str)
-        assert isinstance(result["remote_html_dir"], str)
-        assert isinstance(result["remote_tile_dir"], str)
+        assert isinstance(config.settings["tile_dir"], str)
+        assert isinstance(config.settings["data_dir"], str)
+        assert isinstance(config.settings["remote_html_dir"], str)
+        assert isinstance(config.settings["remote_tile_dir"], str)
+
+    def test_change_env_function_exists(self):
+        """change_env function should exist and be callable."""
+        assert callable(config.change_env)
 
 
 class TestAreaDefinitions:
@@ -384,7 +384,9 @@ class TestGenerateSingleTile:
                 lats=lats, lons=lons, data=data,
                 output_dir=tmpdir,
                 cmap="viridis", levels=10,
-                vmin=-1, vmax=1
+                vmin=-1, vmax=1,
+                add_contour_lines=False,
+                contour_levels=5
             )
 
             tile_path = tile_dir / "0.png"
@@ -408,7 +410,9 @@ class TestGenerateSingleTile:
                 lats=lats, lons=lons, data=data,
                 output_dir=tmpdir,
                 cmap="viridis", levels=10,
-                vmin=0, vmax=5
+                vmin=0, vmax=5,
+                add_contour_lines=False,
+                contour_levels=5
             )
 
             tile_path = tile_dir / "0.png"
