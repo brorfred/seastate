@@ -38,6 +38,13 @@ def today(force=False, sync=True):
 
     Generates all tile products for the current date and optionally
     syncs to remote server if configured.
+
+    Parameters
+    ----------
+    force : bool, optional
+        Force regeneration even if tiles exist, by default False.
+    sync : bool, optional
+        Sync tiles to remote server after generation, by default True.
     """
     dtm = pd.Timestamp.now().normalize()
     tile.all(dtm, force=force)
@@ -52,6 +59,13 @@ def yesterday(force=False, sync=True):
 
     Generates all tile products for yesterday and optionally syncs
     tiles and layer configuration to remote server if configured.
+
+    Parameters
+    ----------
+    force : bool, optional
+        Force regeneration even if tiles exist, by default False.
+    sync : bool, optional
+        Sync tiles to remote server after generation, by default True.
     """
     dtm = pd.Timestamp.now().normalize()-pd.Timedelta(1,"D")
     tile.all(dtm, force=False)
@@ -64,15 +78,15 @@ def yesterday(force=False, sync=True):
 def last_days(days=7, sync=True):
     """Process tiles for the last N days.
 
+    Processes tiles for each day in the range from (today - days) to today,
+    inclusive. Syncs to remote server after processing if configured.
+
     Parameters
     ----------
     days : int, optional
         Number of days to process, by default 7.
-
-    Notes
-    -----
-    Processes tiles for each day in the range from (today - days) to today,
-    inclusive. Syncs to remote server after processing if configured.
+    sync : bool, optional
+        Sync tiles to remote server after generation, by default True.
     """
     dtm1 = pd.Timestamp.now().normalize()-pd.Timedelta(days,"D")
     dtm2 = pd.Timestamp.now().normalize()

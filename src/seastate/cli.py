@@ -1,4 +1,8 @@
+"""Command-line interface for the seastate processor.
 
+This module provides CLI commands for generating and managing oceanographic
+map tiles using the Typer framework.
+"""
 import typer
 from typing import Annotated
 
@@ -13,9 +17,7 @@ def update(
     sync: Annotated[bool, typer.Option(help="Sync tiles to remote.")] = True,
 
 ):
-    """
-    Update tiles with yesterday's and today's fields"
-    """
+    """Update tiles with yesterday's and today's fields."""
 
     if env.lower() != "default":
         seastate.config.change_env(env)
@@ -26,8 +28,8 @@ def update(
 
 @app.callback()
 def callback():
-    """
-    A cruise support system converting geophysical fields to slippy tiles.
+    """A cruise support system converting geophysical fields to slippy tiles.
+
     Currently SST, SSH, and Chl from Copernicus are available.
     """
 
@@ -36,15 +38,11 @@ def callback():
 
 @app.command()
 def shoot():
-    """
-    Shoot the portal gun
-    """
+    """Shoot the portal gun."""
     typer.echo("Shooting portal gun")
 
 
 @app.command()
 def load():
-    """
-    Load the portal gun
-    """
+    """Load the portal gun."""
     typer.echo("Loading portal gun")

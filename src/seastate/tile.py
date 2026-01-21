@@ -39,12 +39,12 @@ def tiles_exists(id, dtm):
     return tilepath.is_dir()
 
 def bathy(dtm=None, verbose=True, force=True):
-    """Generate SSH (Sea Surface Height) tiles for a given date.
+    """Generate bathymetry tiles from GEBCO data.
 
     Parameters
     ----------
-    dtm : str or datetime-like
-        The date to generate tiles for.
+    dtm : str or datetime-like, optional
+        Unused parameter for API compatibility.
     verbose : bool, optional
         Enable verbose output, by default True.
     force : bool, optional
@@ -223,13 +223,14 @@ def globcolour(dtm, verbose=True, force=True):
 def all(dtm, force=False, verbose=False):
     """Generate all tile products for a given date.
 
-    Generates SSH, SST, and GlobColour tiles. Does not regenerate
-    tiles that already exist.
+    Generates SSH, SST, and GlobColour tiles.
 
     Parameters
     ----------
     dtm : str or datetime-like
         The date to generate tiles for.
+    force : bool, optional
+        Force regeneration even if tiles exist, by default False.
     verbose : bool, optional
         Enable verbose output, by default False.
     """

@@ -1,0 +1,114 @@
+site_name: Seastate Documentation
+site_description: Documentation for the Seastate oceanographic data processing and tile generation system
+site_author: Seastate Team
+repo_url: https://github.com/your-org/seastate
+repo_name: seastate
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: blue
+      accent: light blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: blue
+      accent: light blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [src, .]
+          options:
+            docstring_style: numpy
+            docstring_options:
+              ignore_init_summary: false
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            members_order: source
+            heading_level: 2
+            merge_init_into_class: true
+            separate_signature: true
+            show_signature_annotations: true
+            signature_crossrefs: true
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.mark
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Configuration: getting-started/configuration.md
+    - Quick Start: getting-started/quickstart.md
+  - User Guide:
+    - Overview: user-guide/overview.md
+    - Data Sources: user-guide/data-sources.md
+    - Tile Generation: user-guide/tile-generation.md
+    - Layer Configuration: user-guide/layer-config.md
+  - API Reference:
+    - Overview: api/index.md
+    - seastate: api/processor.md
+    - seastate.config: api/config.md
+    - seastate.tile: api/tile.md
+    - seastate.layer_config: api/layer_config.md
+    - seastate.area_definitions: api/area_definitions.md
+    - seastate.cli: api/cli.md
+    - Data Sources:
+      - seastate.data_sources.cmems_ssh: api/data_sources/cmems_ssh.md
+      - seastate.data_sources.ostia: api/data_sources/ostia.md
+      - seastate.data_sources.globcolour: api/data_sources/globcolour.md
+      - seastate.data_sources.gebco_bathy: api/data_sources/gebco_bathy.md
+      - seastate.data_sources.olci_L2: api/data_sources/olci_L2.md
+    - Readers:
+      - seastate.readers.copernicus_ssh: api/readers/copernicus_ssh.md
+    - Tilers:
+      - seastate.tilers.rectlinear: api/tilers/rectlinear.md
+      - seastate.tilers.utils: api/tilers/utils.md
+    - Utilities:
+      - shiptrack: api/shiptrack.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/your-org/seastate
+
+copyright: Copyright &copy; 2024-2026 Seastate Team
