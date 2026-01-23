@@ -27,9 +27,6 @@ DATADIR = pathlib.Path(settings["data_dir"] + "/copernicus/OSTIA")
 DATADIR.mkdir(parents=True, exist_ok=True)
 
 
-VERBOSE = True
-
-
 def vprint(text):
     """Print text if verbose mode is enabled.
 
@@ -38,7 +35,7 @@ def vprint(text):
     text : str
         Text to print.
     """
-    if VERBOSE:
+    if settings.get("verbose"):
         print(text)
 
 

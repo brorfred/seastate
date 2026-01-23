@@ -23,10 +23,6 @@ settings = config.settings
 DATADIR = pathlib.Path(settings["data_dir"] + "/copernicus/SSH")
 DATADIR.mkdir(parents=True, exist_ok=True)
 
-
-VERBOSE = True
-
-
 def vprint(text):
     """Print text if verbose mode is enabled.
 
@@ -35,7 +31,7 @@ def vprint(text):
     text : str
         Text to print.
     """
-    if VERBOSE:
+    if settings.get("verbose"):
         print(text)
 
 
@@ -72,6 +68,7 @@ def open_dataset(dtm="2025-06-03", _pause=0, _retry=0, force=False):
         Dataset containing SSH variables (sla, adt, ugos, vgos).
     """
     fn = DATADIR / filename(dtm=dtm)
+    vprint(f"SSH Data file: {fn}")
     if force or not fn.is_file():
         retrieve(dtm=dtm, force=force)
     if _retry > 3:

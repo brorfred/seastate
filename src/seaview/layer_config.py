@@ -14,8 +14,6 @@ from jinja2 import Template
 from . import config
 settings = config.settings
 
-VERBOSE = False
-
 
 def vprint(text):
     """Print text if verbose mode is enabled.
@@ -25,7 +23,7 @@ def vprint(text):
     text : str
         Text to print.
     """
-    if VERBOSE:
+    if settings.get("verbose"):
         print(text)
 
 

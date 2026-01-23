@@ -19,8 +19,6 @@ import io
 
 from .utils import filter_small_contours
 
-VERBOSE = True
-
 
 def vprint(string):
     """Print string if verbose mode is enabled.
@@ -30,7 +28,7 @@ def vprint(string):
     string : str
         Text to print.
     """
-    if VERBOSE:
+    if settings.get("verbose"):
         print(string)
 
 
@@ -428,8 +426,7 @@ def cruise_tiles(da, tile_base, cmap="viridis", levels=None, vmin=None, vmax=Non
     verbose : bool, optional
         Whether to print progress messages, by default True.
     """
-    global VERBOSE
-    VERBOSE = verbose
+    settings.set("verbose", verbose)
     generator = SlippyTileGenerator(
         min_lat=float(da.latitude.min()),
         max_lat=float(da.latitude.max()),

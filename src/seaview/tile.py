@@ -17,7 +17,11 @@ from .data_sources import gebco_bathy
 from . import config
 settings = config.settings
 from copernicusmarine import CoordinatesOutOfDatasetBounds
-import cmasher as cmr
+
+def vprint(string):
+    if settings.get("verbose"):
+        print(string)
+
 
 def tiles_exists(id, dtm):
     """Check if tiles already exist for a given product and date.
@@ -56,7 +60,7 @@ def bathy(dtm=None, verbose=True, force=True):
     ds = gebco_bathy.open_dataset(dtm=dtm)
     tile_base.mkdir(parents=True, exist_ok=True)
 
-    rectlin_tiler.VERBOSE = verbose
+    settings.set("verbose", verbose)
     generator = rectlin_tiler.SlippyTileGenerator(
         min_lat=float(ds.latitude.min()),
         max_lat=float(ds.latitude.max()),
@@ -90,7 +94,7 @@ def ssh(dtm, verbose=True, force=True):
     """
     if tiles_exists("ssh", dtm) and not force:
         return
-    rectlin_tiler.VERBOSE = verbose
+    settings.set("verbose", verbose)
     dtm = pd.to_datetime(dtm, utc=True)
     try:
         ds = cmems_ssh.open_dataset(dtm=dtm)
@@ -151,7 +155,7 @@ def ostia(dtm, verbose=True, force=True):
     """
     if tiles_exists("ostia", dtm) and not force:
         return
-    rectlin_tiler.VERBOSE = verbose
+    settings.set("verbose", verbose)
     dtm = pd.to_datetime(dtm, utc=True)
     try:
         ds = ostia_sst.open_dataset(dtm=dtm)
@@ -196,7 +200,7 @@ def globcolour(dtm, verbose=True, force=True):
     """
     if tiles_exists("globcolour", dtm) and not force:
         return
-    rectlin_tiler.VERBOSE = verbose
+    settings.set("verbose", verbose)
     dtm = pd.to_datetime(dtm, utc=True)
     try:
         ds = cmems_globcolour.open_dataset(dtm=dtm)

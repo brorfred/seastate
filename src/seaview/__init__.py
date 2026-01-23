@@ -8,6 +8,9 @@ import pandas as pd
 from . import config, tile, layer_config
 settings = config.settings
 
+def vprint(string):
+    if settings.get("verbose"):
+        print(string)
 
 class DateInFutureError(Exception):
     """Exception raised when a requested date is in the future.
@@ -47,11 +50,15 @@ def today(force=False, sync=True):
         Sync tiles to remote server after generation, by default True.
     """
     dtm = pd.Timestamp.now().normalize()
-    tile.all(dtm, force=force)
+    vprint(f"\n\nProcess today's date: {dtm}")
+    tile.all(dtm, force=force, verbose=True)
+    print(settings.get("remote_sync"), settings.get("tiles_updated"), sync)
     if settings.get("remote_sync") and settings.get("tiles_updated") and sync:
+        print(settings.get("remote_sync"), settings.get("tiles_updated"), sync)
+        print("sync")
         tile.sync()
         layer_config.sync()
-
+        settings.set("tiles_updated", False)
 
 
 def yesterday(force=False, sync=True):
@@ -68,11 +75,15 @@ def yesterday(force=False, sync=True):
         Sync tiles to remote server after generation, by default True.
     """
     dtm = pd.Timestamp.now().normalize()-pd.Timedelta(1,"D")
-    tile.all(dtm, force=False)
+    vprint(f"\n\nProcess Yesterday's date: {dtm}")
+    tile.all(dtm, force=False, verbose=True)
+    print(settings.get("remote_sync"), settings.get("tiles_updated"), sync)
     if settings.get("remote_sync") and settings.get("tiles_updated") and sync:
         print("Sync tiles")
         tile.sync()
         layer_config.sync()
+        settings.set("tiles_updated", False)
+
 
 
 def last_days(days=7, sync=True):
@@ -95,3 +106,4 @@ def last_days(days=7, sync=True):
     if settings.get("remote_sync") and settings.get("tiles_updated") and sync:
         tile.sync()
         layer_config.sync()
+        settings.set("tiles_updated", False)

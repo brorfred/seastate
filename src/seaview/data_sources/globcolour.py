@@ -27,7 +27,6 @@ DATADIR.mkdir(parents=True, exist_ok=True)
 DATASET_ID = "cmems_obs-oc_glo_bgc-plankton_nrt_l3-multi-4km_P1D"
 filename_prefix = "GLOBCOLOUR"
 
-VERBOSE = True
 
 
 def vprint(text):
@@ -38,7 +37,7 @@ def vprint(text):
     text : str
         Text to print.
     """
-    if VERBOSE:
+    settings.get("verbose"):
         print(text)
 
 
