@@ -96,5 +96,5 @@ dev = [
 ]
 
 [project.scripts]
-sea = "seaview.cli2:app"
-sea-update = "seaview.cli2:update"
+sea = "seaview.cli:app"
+sea-update = "seaview.cli:update"

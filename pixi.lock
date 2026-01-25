@@ -4867,7 +4867,7 @@ packages:
 - pypi: ./
   name: seaview
   version: 0.1.0
-  sha256: a37044b018fd7c600d1219e374d87a637dbe9d5c15cefcec90b8cb57e78b072a
+  sha256: c8ddfa3b39fbdf69cf0e3f71adb355245392568a32a657e4c01b8ee97a5dd9a0
   requires_dist:
   - numpy>=1.24.0
   - scipy>=1.10.0

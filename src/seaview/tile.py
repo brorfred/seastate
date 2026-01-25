@@ -247,19 +247,29 @@ def all(dtm, force=False, verbose=False):
     globcolour(dtm, verbose=verbose, force=force)
 
 
-def sync():
+def sync(dtm=None):
     """Synchronize local tiles to remote server via rsync.
 
     Uses sysrsync to transfer tiles from the local tile directory
     to the configured remote server.
     """
-    local_tiledir = settings["tile_dir"]
-    remote_tile_dir = settings["remote_tile_dir"]
-    sysrsync.run(source=local_tiledir,
-                 destination=remote_tile_dir,
-                 destination_ssh='tvarminne',
-                 options=['-az'],
-                 sync_source_contents=True,
-                 strict=True,
-                 )
+    def rsync(local, remote):
+        sysrsync.run(source=local,
+                     destination=remote,
+                     destination_ssh='tvarminne',
+                     options=['-a'],
+                     sync_source_contents=True,
+                     strict=True,
+                     )
+
+    if dtm is not None:
+        dtm = pd.to_datetime(dtm)
+        local_paths = pathlib.Path(settings.get("tile_dir")).glob(f"*/{dtm.date()}")
+
+        for local in local_paths:
+            remote = pathlib.Path(settings.get("remote_tile_dir")) / "/".join(local.parts[-2:])
+            rsync(str(local), str(remote))
+        pass
+    else:
+        rsync(settings["tile_dir"], settings["remote_tile_dir"])
     settings.set("tiles_updated", False)

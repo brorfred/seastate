@@ -14,6 +14,7 @@ from jinja2 import Template
 from .utils import vprint
 from . import config
 settings = config.settings
+from .utils import vprint
 
 def sync():
     """Generate and sync layer configuration to remote server.
@@ -21,13 +22,14 @@ def sync():
     Generates a new layer configuration file, updates it with current
     tile date ranges, and syncs to the remote server via rsync.
     """
+    vprint("Sync layer_config file")
     tmp_dir = pathlib.Path("/tmp")
     generate_file(config_file_path=tmp_dir)
     update(json_file_path=tmp_dir / "layer_config.json")
     payload = dict(source=str(tmp_dir / "layer_config.json"),
                  destination=settings.get("remote_html_dir"),
                  destination_ssh=settings.get("remote_server"),
-                 options=['-az'],
+                 options=['-a'],
                  strict=True,)
     sysrsync.run(**payload)
     payload["destination"] = payload["destination"] + "/devel/"

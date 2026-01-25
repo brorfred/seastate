@@ -54,12 +54,12 @@ def today(force=False, sync=True):
     if settings.get("remote_sync") and settings.get("tiles_updated") and sync:
         print(settings.get("remote_sync"), settings.get("tiles_updated"), sync)
         print("sync")
-        tile.sync()
+        tile.sync(dtm)
         layer_config.sync()
         settings.set("tiles_updated", False)
 
 
-def yesterday(force=False, sync=True):
+def yesterday(force=False, sync=True, verbose=True):
     """Process tiles for yesterday's date.
 
     Generates all tile products for yesterday and optionally syncs
@@ -72,13 +72,15 @@ def yesterday(force=False, sync=True):
     sync : bool, optional
         Sync tiles to remote server after generation, by default True.
     """
+    settings.set("verbose", verbose)
     dtm = pd.Timestamp.now().normalize()-pd.Timedelta(1,"D")
     vprint(f"\n\nProcess Yesterday's date: {dtm}")
-    tile.all(dtm, force=False, verbose=True)
+    tile.all(dtm, force=False, verbose=verbose)
     print(settings.get("remote_sync"), settings.get("tiles_updated"), sync)
-    if settings.get("remote_sync") and settings.get("tiles_updated") and sync:
+    if True: #settings.get("remote_sync") and settings.get("tiles_updated") and sync:
         print("Sync tiles")
-        tile.sync()
+        tile.sync(dtm)
+        print(f"{pd.Timestamp.now()} Sync Layer config")
         layer_config.sync()
         settings.set("tiles_updated", False)
 
