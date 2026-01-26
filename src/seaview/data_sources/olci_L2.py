@@ -16,7 +16,7 @@ import shutil
 import tempfile
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
-
+import warnings
 
 import eumdac
 import pandas as pd
@@ -26,8 +26,8 @@ import xarray as xr
 from eumdac.errors import Text
 import sqlite3
 
-from . import config
-settings = config.settings()
+from .. import config
+settings = config.settings
 
 DATADIR = pathlib.Path(settings["data_dir"] + "/eumetsat/OLCI_L2")
 DATADIR.mkdir(parents=True, exist_ok=True)
@@ -167,8 +167,11 @@ def get_token():
     eumdac.AccessToken
         Access token for EUMETSAT Data Store API.
     """
-    with open("/home/bror/.eumdac/credentials", encoding="utf-8") as f:
-        credentials = f.read().split(",")
+    if "eumetsat_key" in settings:
+        credentials = (settings.get("eumetsat_key"), settings.get("eumetsat_secret"))
+    else:
+        with open("/home/bror/.eumdac/credentials", encoding="utf-8") as f:
+            credentials = f.read().split(",")
     token = eumdac.AccessToken(credentials)
     return token
 
@@ -263,12 +266,23 @@ def extract_swath_scenes(dtm="2023-06-03", tmpdir=None):
     rmchildren(tmpdir)
     scenes = []
 
+    # Files not handled by satpy's olci_l2 reader (ancillary data)
+    skip_files = {
+        "instrument_data.nc", "par.nc", "iop_lsd.nc", "tie_meteo.nc",
+        "tie_geo_coordinates.nc", "time_coordinates.nc"
+    }
+
     for zip_fn in swathlist(dtm):
         with zipfile.ZipFile(SWATHDIR / zip_fn) as z:
             z.extractall(tmpdir)
-        flist = (tmpdir / zip_fn).with_suffix("").glob("*.nc")
-        scn = satpy.Scene(reader="olci_l2", filenames=flist)
-        scn.load(["chl_oc4me", "chl_nn"])
+        flist = [
+            f for f in (tmpdir / zip_fn).with_suffix("").glob("*.nc")
+            if f.name not in skip_files
+        ]
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore")
+            scn = satpy.Scene(reader="olci_l2", filenames=flist)
+            scn.load(["chl_oc4me", "chl_nn"])
         scenes.append(scn)
     return scenes
     combined = scenes[0][0]
