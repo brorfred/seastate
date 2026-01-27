@@ -12,12 +12,14 @@ import pathlib
 import time
 import copernicusmarine
 
+import numpy as np
 import pandas as pd
 import satpy
 import xarray as xr
 import copernicusmarine
 
 from ..utils import vprint
+from seaview import DataObjectError
 from seaview.area_definitions import rectlinear as rectlin_area
 from seaview import config
 settings = config.settings
@@ -67,7 +69,7 @@ def open_dataset(dtm="2025-06-03", _pause=0, _retry=0, force=False):
     if force or not fn.is_file():
         retrieve(dtm=dtm, force=force)
     if _retry > 3:
-        raise OSError(f"Failed to open {fn} after {_retry} attempts.")
+        raise DataObjectError(f"Failed to open {fn} after {_retry} attempts.")
     if _retry > 0:
         vprint("Failed to open the file, will try again")
     time.sleep(_pause)
@@ -75,6 +77,10 @@ def open_dataset(dtm="2025-06-03", _pause=0, _retry=0, force=False):
         ds = xr.open_dataset(fn, engine="h5netcdf")
     except (OSError,):
         ds = open_dataset(dtm=dtm, _pause=5, _retry=_retry+1)
+    if np.nansum(ds.CHL) == 0:
+        fn.unlink()
+        raise DataObjectError(f"The CHL data variable in {fn}" +
+                              " is empty, file deleted.")
     return ds
 
 

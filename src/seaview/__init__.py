@@ -10,11 +10,12 @@ settings = config.settings
 
 from .utils import vprint
 
-class DateInFutureError(Exception):
-    """Exception raised when a requested date is in the future.
+class DataObjectError(BaseException):
+    """Exception raised when the opening of a data object fails.
 
-    This error is raised when attempting to process data for a date
-    that has not yet occurred.
+    This error is raised when attempting to retireve or open a data
+    object. The reason can both be that the retreival failed or that
+    the underlying fiel is corrupt.
     """
     pass
 
@@ -50,7 +51,6 @@ def today(force=False, sync=True):
     dtm = pd.Timestamp.now().normalize()
     vprint(f"\n\nProcess today's date: {dtm}")
     tile.all(dtm, force=force, verbose=True)
-    print(settings.get("remote_sync"), settings.get("tiles_updated"), sync)
     if settings.get("remote_sync") and settings.get("tiles_updated") and sync:
         print(settings.get("remote_sync"), settings.get("tiles_updated"), sync)
         print("sync")
@@ -75,10 +75,12 @@ def yesterday(force=False, sync=True, verbose=True):
     settings.set("verbose", verbose)
     dtm = pd.Timestamp.now().normalize()-pd.Timedelta(1,"D")
     vprint(f"\n\nProcess Yesterday's date: {dtm}")
-    tile.all(dtm, force=False, verbose=verbose)
+    tile.all(dtm, force=False, verbose=True)
     if settings.get("remote_sync") and settings.get("tiles_updated") and sync:
         print("Sync tiles")
         tile.sync(dtm)
+        print("Tiles synced")
+
         print(f"{pd.Timestamp.now()} Sync Layer config")
         layer_config.sync()
         settings.set("tiles_updated", False)
