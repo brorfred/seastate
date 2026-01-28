@@ -1,13 +1,16 @@
-"""Slippy Tile Generator for Satpy Scenes.
+"""Slippy Tile Generator for Rectilinear Data.
 
-This module generates filled contour slippy map tiles from satpy scenes
-with parallel processing. Uses mercantile for robust tile calculations.
+This module generates filled contour slippy map tiles from rectilinear
+(gridded) data with parallel processing. Uses mercantile for robust tile
+calculations.
+
+Data is transformed to Web Mercator (EPSG:3857) before triangulation to
+ensure proper alignment with slippy map tiles.
 """
 
-import os
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -16,56 +19,71 @@ from matplotlib import tri
 from PIL import Image
 import mercantile
 import io
+from pyproj import Transformer
 
 from .utils import filter_small_contours
 from ..utils import vprint
+from .. import config
+
+settings = config.settings
+
+# Web Mercator transformer (lon/lat to x/y meters)
+_transformer_to_webmerc = Transformer.from_crs(
+    "EPSG:4326", "EPSG:3857", always_xy=True
+)
+
+
+def lonlat_to_webmercator(lons: np.ndarray, lats: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """Transform longitude/latitude arrays to Web Mercator coordinates.
+
+    Parameters
+    ----------
+    lons : numpy.ndarray
+        Longitude values in degrees.
+    lats : numpy.ndarray
+        Latitude values in degrees.
+
+    Returns
+    -------
+    tuple of numpy.ndarray
+        (x, y) coordinates in Web Mercator meters.
+    """
+    x, y = _transformer_to_webmerc.transform(lons, lats)
+    return x.astype(np.float32), y.astype(np.float32)
 
 
 class SlippyTileGenerator:
-    """Generate slippy map tiles from satpy scenes with filled contours.
+    """Generate slippy map tiles from rectilinear data with filled contours.
+
+    Data is transformed to Web Mercator (EPSG:3857) before triangulation
+    to ensure proper alignment with slippy map tiles.
 
     Parameters
     ----------
     min_lat : float, optional
-        Minimum latitude (southern boundary), by default -15.
+        Minimum latitude (southern boundary). If None, uses settings.
     max_lat : float, optional
-        Maximum latitude (northern boundary), by default 55.
+        Maximum latitude (northern boundary). If None, uses settings.
     min_lon : float, optional
-        Minimum longitude (western boundary), by default -75.
+        Minimum longitude (western boundary). If None, uses settings.
     max_lon : float, optional
-        Maximum longitude (eastern boundary), by default -5.
+        Maximum longitude (eastern boundary). If None, uses settings.
 
     Attributes
     ----------
     TILE_SIZE : int
         Size of output tiles in pixels (256).
-    min_lat, max_lat : float
-        Latitude bounds.
-    min_lon, max_lon : float
-        Longitude bounds.
     """
 
     TILE_SIZE = 256
 
-    def __init__(self, min_lat: float = -15, max_lat: float = 55,
-                 min_lon: float = -75, max_lon: float = -5):
-        """Initialize tile generator with geographic bounds.
-
-        Parameters
-        ----------
-        min_lat : float, optional
-            Minimum latitude (southern boundary), by default -15.
-        max_lat : float, optional
-            Maximum latitude (northern boundary), by default 55.
-        min_lon : float, optional
-            Minimum longitude (western boundary), by default -75.
-        max_lon : float, optional
-            Maximum longitude (eastern boundary), by default -5.
-        """
-        self.min_lat = min_lat
-        self.max_lat = max_lat
-        self.min_lon = min_lon
-        self.max_lon = max_lon
+    def __init__(self, min_lat: float = None, max_lat: float = None,
+                 min_lon: float = None, max_lon: float = None):
+        """Initialize tile generator with geographic bounds."""
+        self.min_lat = min_lat if min_lat is not None else settings.get("lat1", -15)
+        self.max_lat = max_lat if max_lat is not None else settings.get("lat2", 55)
+        self.min_lon = min_lon if min_lon is not None else settings.get("lon1", -75)
+        self.max_lon = max_lon if max_lon is not None else settings.get("lon2", -5)
 
     def get_tiles_for_bounds(self, zoom: int):
         """Get all tiles that intersect with the geographic bounds.
@@ -80,7 +98,6 @@ class SlippyTileGenerator:
         list of mercantile.Tile
             List of tiles covering the bounding box.
         """
-        # Get tiles that cover the bounding box
         tiles = list(mercantile.tiles(
             self.min_lon, self.min_lat,
             self.max_lon, self.max_lat,
@@ -88,49 +105,12 @@ class SlippyTileGenerator:
         ))
         return tiles
 
-    def diagnose_coverage(self, scene_lats: np.ndarray, scene_lons: np.ndarray, zoom: int):
-        """Diagnose data coverage across tiles at a given zoom level.
-
-        Parameters
-        ----------
-        scene_lats : numpy.ndarray
-            Latitude coordinates of the scene data.
-        scene_lons : numpy.ndarray
-            Longitude coordinates of the scene data.
-        zoom : int
-            Zoom level to diagnose.
-        """
-        # Get actual data bounds
-        if scene_lats.ndim == 1:
-            data_min_lat = scene_lats.min()
-            data_max_lat = scene_lats.max()
-            data_min_lon = scene_lons.min()
-            data_max_lon = scene_lons.max()
-        else:
-            data_min_lat = scene_lats.min()
-            data_max_lat = scene_lats.max()
-            data_min_lon = scene_lons.min()
-            data_max_lon = scene_lons.max()
-
-        vprint(f"\n=== Diagnostic Info for Zoom {zoom} ===")
-        vprint(f"Generator bounds: lat=[{self.min_lat}, {self.max_lat}], lon=[{self.min_lon}, {self.max_lon}]")
-        vprint(f"Data bounds: lat=[{data_min_lat:.2f}, {data_max_lat:.2f}], lon=[{data_min_lon:.2f}, {data_max_lon:.2f}]")
-
-        tiles = self.get_tiles_for_bounds(zoom)
-        vprint(f"Total tiles: {len(tiles)}")
-
-        if tiles:
-            sample_tile = tiles[0]
-            bounds = mercantile.bounds(sample_tile.x, sample_tile.y, sample_tile.z)
-            vprint(f"Sample tile {sample_tile.x}/{sample_tile.y}: lat=[{bounds.south:.2f}, {bounds.north:.2f}], lon=[{bounds.west:.2f}, {bounds.east:.2f}]")
-        vprint("="*40)
-
     def generate_tiles(self, scene_data: np.ndarray, scene_lats: np.ndarray,
-                      scene_lons: np.ndarray, output_dir: str, zoom_levels: list,
-                      num_workers: int = 10, cmap: str = 'RdBu',
-                      levels: int = 20, vmin: Optional[float] = None,
-                      vmax: Optional[float] = None,
-                      add_contour_lines: bool = False, contour_levels: int = 5):
+                       scene_lons: np.ndarray, output_dir: str, zoom_levels: List[int],
+                       num_workers: int = 10, cmap: str = 'RdBu',
+                       levels: int = 20, vmin: Optional[float] = None,
+                       vmax: Optional[float] = None,
+                       add_contour_lines: bool = False, contour_levels: int = 5):
         """Generate tiles for multiple zoom levels in parallel.
 
         Parameters
@@ -191,23 +171,24 @@ class SlippyTileGenerator:
         # Prepare scene data
         valid_mask = ~np.isnan(data_work)
         if vmin is None:
-            vmin = np.nanmin(data_work)
+            vmin = float(np.nanmin(data_work))
         if vmax is None:
-            vmax = np.nanmax(data_work)
+            vmax = float(np.nanmax(data_work))
 
         # Flatten arrays for triangulation using the 2D grids
-        lats_flat = lat_grid[valid_mask]
-        lons_flat = lon_grid[valid_mask]
-        data_flat = data_work[valid_mask]
+        lats_flat = lat_grid[valid_mask].astype(np.float32)
+        lons_flat = lon_grid[valid_mask].astype(np.float32)
+        data_flat = data_work[valid_mask].astype(np.float32)
+
+        # Transform to Web Mercator for proper tile alignment
+        vprint("Transforming coordinates to Web Mercator...")
+        x_wm, y_wm = lonlat_to_webmercator(lons_flat, lats_flat)
 
         vprint(f"Processing {len(data_flat)} valid data points")
         vprint(f"Data range: {vmin:.4f} to {vmax:.4f}")
 
         for zoom in zoom_levels:
             vprint(f"\nGenerating tiles for zoom level {zoom}")
-
-            # Run diagnostics
-            self.diagnose_coverage(scene_lats, scene_lons, zoom)
 
             # Get all tiles using mercantile
             tiles = self.get_tiles_for_bounds(zoom)
@@ -227,9 +208,9 @@ class SlippyTileGenerator:
             with ProcessPoolExecutor(max_workers=num_workers) as executor:
                 futures = {
                     executor.submit(
-                        self._generate_single_tile,
+                        _generate_single_tile,
                         tile.z, tile.x, tile.y,
-                        lats_flat, lons_flat, data_flat,
+                        x_wm, y_wm, data_flat,
                         str(output_path), cmap, levels, vmin, vmax,
                         add_contour_lines, contour_levels
                     ): (tile.x, tile.y) for tile in tiles
@@ -239,7 +220,7 @@ class SlippyTileGenerator:
                 for future in as_completed(futures):
                     completed += 1
                     if completed % 100 == 0 or completed == len(tiles):
-                        vprint(f"Progress: {completed}/{len(tiles)} tiles")
+                        vprint(f"Progress: {completed}/{len(tiles)} tiles", level=1)
 
                     try:
                         future.result()
@@ -249,150 +230,147 @@ class SlippyTileGenerator:
 
             vprint(f"Completed zoom level {zoom}")
 
-    @staticmethod
-    def _generate_single_tile(zoom: int, x: int, y: int,
-                             lats: np.ndarray, lons: np.ndarray, data: np.ndarray,
-                             output_dir: str, cmap: str, levels: int,
-                             vmin: float, vmax: float,
-                             add_contour_lines: bool, contour_levels: int):
-        """Generate a single tile (called in parallel).
 
-        Parameters
-        ----------
-        zoom : int
-            Zoom level.
-        x : int
-            Tile x coordinate.
-        y : int
-            Tile y coordinate.
-        lats : numpy.ndarray
-            Flattened latitude values for valid data points.
-        lons : numpy.ndarray
-            Flattened longitude values for valid data points.
-        data : numpy.ndarray
-            Flattened data values for valid points.
-        output_dir : str
-            Output directory path.
-        cmap : str
-            Matplotlib colormap name.
-        levels : int
-            Number of contour levels.
-        vmin : float
-            Minimum value for colormap.
-        vmax : float
-            Maximum value for colormap.
-        add_contour_lines : bool
-            Whether to add contour lines on top of filled contours.
-        contour_levels : int
-            Number of contour line levels.
-        """
-        # Get tile bounds using mercantile
-        bounds = mercantile.bounds(x, y, zoom)
-        lon_left = bounds.west
-        lon_right = bounds.east
-        lat_bottom = bounds.south
-        lat_top = bounds.north
+def _generate_single_tile(
+    zoom: int, tile_x: int, tile_y: int,
+    x_coords: np.ndarray, y_coords: np.ndarray, data: np.ndarray,
+    output_dir: str, cmap: str, levels: int,
+    vmin: float, vmax: float,
+    add_contour_lines: bool, contour_levels: int
+):
+    """Generate a single tile using Web Mercator coordinates.
 
-        # Calculate tile size in degrees for adaptive buffer
-        tile_height = lat_top - lat_bottom
-        tile_width = lon_right - lon_left
-        # Use larger buffer (50% of tile size) to ensure good interpolation
-        buffer_lat = tile_height * 0.5
-        buffer_lon = tile_width * 0.5
+    Parameters
+    ----------
+    zoom : int
+        Zoom level.
+    tile_x : int
+        Tile x coordinate.
+    tile_y : int
+        Tile y coordinate.
+    x_coords : numpy.ndarray
+        Flattened x values in Web Mercator meters.
+    y_coords : numpy.ndarray
+        Flattened y values in Web Mercator meters.
+    data : numpy.ndarray
+        Flattened data values for valid points.
+    output_dir : str
+        Output directory path.
+    cmap : str
+        Matplotlib colormap name.
+    levels : int
+        Number of contour levels.
+    vmin : float
+        Minimum value for colormap.
+    vmax : float
+        Maximum value for colormap.
+    add_contour_lines : bool
+        Whether to add contour lines on top of filled contours.
+    contour_levels : int
+        Number of contour line levels.
+    """
+    TILE_SIZE = 256
+    tile_path = Path(output_dir) / str(zoom) / str(tile_x) / f"{tile_y}.png"
 
-        # Filter data within tile bounds with buffer for edge interpolation
-        mask = (
-            (lats >= lat_bottom - buffer_lat) & (lats <= lat_top + buffer_lat) &
-            (lons >= lon_left - buffer_lon) & (lons <= lon_right + buffer_lon)
+    # Get tile bounds in Web Mercator meters
+    xy_bounds = mercantile.xy_bounds(tile_x, tile_y, zoom)
+    x_left, x_right = xy_bounds.left, xy_bounds.right
+    y_bottom, y_top = xy_bounds.bottom, xy_bounds.top
+
+    # Buffer for edge interpolation (15% of tile size)
+    tile_height = y_top - y_bottom
+    tile_width = x_right - x_left
+    buffer_y = tile_height * 0.15
+    buffer_x = tile_width * 0.15
+
+    buffered_left = x_left - buffer_x
+    buffered_right = x_right + buffer_x
+    buffered_bottom = y_bottom - buffer_y
+    buffered_top = y_top + buffer_y
+
+    # Filter data within tile bounds with buffer
+    mask = (
+        (x_coords >= buffered_left) & (x_coords <= buffered_right) &
+        (y_coords >= buffered_bottom) & (y_coords <= buffered_top)
+    )
+
+    if not np.any(mask):
+        img = Image.new('RGBA', (TILE_SIZE, TILE_SIZE), (0, 0, 0, 0))
+        img.save(tile_path)
+        return
+
+    tile_x_coords = x_coords[mask]
+    tile_y_coords = y_coords[mask]
+    tile_data = data[mask]
+
+    if len(tile_data) < 3:
+        img = Image.new('RGBA', (TILE_SIZE, TILE_SIZE), (0, 0, 0, 0))
+        img.save(tile_path)
+        return
+
+    # Subsample if too many points to prevent OOM in triangulation
+    MAX_POINTS = 500_000
+    n_points_tile = len(tile_data)
+    if n_points_tile > MAX_POINTS:
+        step = n_points_tile // MAX_POINTS + 1
+        tile_x_coords = tile_x_coords[::step]
+        tile_y_coords = tile_y_coords[::step]
+        tile_data = tile_data[::step]
+
+    # Create figure
+    fig, ax = plt.subplots(figsize=(TILE_SIZE / 100, TILE_SIZE / 100), dpi=100)
+    ax.set_xlim(x_left, x_right)
+    ax.set_ylim(y_bottom, y_top)
+    ax.axis('off')
+
+    try:
+        triang = tri.Triangulation(tile_x_coords, tile_y_coords)
+
+        # Mask large triangles (gaps in data)
+        triangles = triang.triangles
+        tri_x = triang.x[triangles]
+        tri_y = triang.y[triangles]
+
+        # Vectorized area calculation
+        areas = 0.5 * np.abs(
+            (tri_x[:, 1] - tri_x[:, 0]) * (tri_y[:, 2] - tri_y[:, 0]) -
+            (tri_x[:, 2] - tri_x[:, 0]) * (tri_y[:, 1] - tri_y[:, 0])
         )
+        median_area = np.median(areas)
+        triang.set_mask(areas > 3 * median_area)
+        del tri_x, tri_y, areas
 
-        tile_path = Path(output_dir) / str(zoom) / str(x) / f"{y}.png"
+        if not np.iterable(levels):
+            levels = np.linspace(vmin, vmax, levels)
+        ax.tricontourf(triang, tile_data, levels=levels,
+                       cmap=cmap, vmin=vmin, vmax=vmax, extend='both')
 
-        if not np.any(mask):
-            # Generate empty transparent tile
-            img = Image.new('RGBA', (SlippyTileGenerator.TILE_SIZE,
-                                     SlippyTileGenerator.TILE_SIZE), (0, 0, 0, 0))
-            img.save(tile_path)
-            return
+        if add_contour_lines and (zoom > 4):
+            cs = ax.tricontour(triang, tile_data, levels=contour_levels,
+                               colors="0.7", linewidths=0.5,
+                               linestyles="solid", alpha=0.5)
+            filter_small_contours(cs, 100)
+            ax.clabel(cs, inline=True, fontsize=8, fmt='%.1f')
 
-        # Extract tile data
-        tile_lons = lons[mask]
-        tile_lats = lats[mask]
-        tile_data = data[mask]
+    except Exception:
+        plt.close(fig)
+        img = Image.new('RGBA', (TILE_SIZE, TILE_SIZE), (0, 0, 0, 0))
+        img.save(tile_path)
+        return
 
-        # Need sufficient points for triangulation
-        if len(tile_data) < 3:
-            img = Image.new('RGBA', (SlippyTileGenerator.TILE_SIZE,
-                                     SlippyTileGenerator.TILE_SIZE), (0, 0, 0, 0))
-            img.save(tile_path)
-            return
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0, hspace=0)
 
-        # Create figure
-        fig, ax = plt.subplots(figsize=(SlippyTileGenerator.TILE_SIZE / 100,
-                                        SlippyTileGenerator.TILE_SIZE / 100),
-                              dpi=100)
-        ax.set_xlim(lon_left, lon_right)
-        ax.set_ylim(lat_bottom, lat_top)
-        ax.set_aspect('equal')
-        ax.axis('off')
-
-        # Create triangulation and filled contours
-        try:
-            triang = tri.Triangulation(tile_lons, tile_lats)
-
-            # Mask out triangles that are too large (gaps in data)
-            # Calculate the median edge length to identify sparse areas
-            x = triang.x[triang.triangles]
-            y = triang.y[triang.triangles]
-
-            # Calculate triangle areas using cross product
-            edge1_x = x[:, 1] - x[:, 0]
-            edge1_y = y[:, 1] - y[:, 0]
-            edge2_x = x[:, 2] - x[:, 0]
-            edge2_y = y[:, 2] - y[:, 0]
-            areas = 0.5 * np.abs(edge1_x * edge2_y - edge1_y * edge2_x)
-
-            # Mask triangles with area > 3x median (likely spanning NaN gaps)
-            median_area = np.median(areas)
-            mask = areas > 3 * median_area
-            triang.set_mask(mask)
-
-            if not np.iterable(levels):
-                levels = np.linspace(vmin, vmax, levels)
-            ax.tricontourf(triang, tile_data, levels=levels,
-                          cmap=cmap, vmin=vmin, vmax=vmax, extend='both')
-            if add_contour_lines and (zoom>4):
-                vprint("Drawing contour lines")
-                cs = ax.tricontour(triang, tile_data, levels=contour_levels,
-                    colors="0.7", linewidths=0.5, linestyles="solid", alpha=0.5)
-                filter_small_contours(cs, 100)
-                ax.clabel(cs, inline=True, fontsize=8, fmt='%.0f')
-        except RuntimeError as e:
-            if not "Error in qhull Delaunay triangulation" in str(e):
-                vprint(e)
-            # If triangulation fails, create empty tile
-            plt.close(fig)
-            img = Image.new('RGBA', (SlippyTileGenerator.TILE_SIZE,
-                                     SlippyTileGenerator.TILE_SIZE), (0, 0, 0, 0))
-            img.save(tile_path)
-            return
-
-        # Remove padding
-        plt.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0, hspace=0)
-
-        # Save to buffer
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png', transparent=True, bbox_inches='tight',
-                   pad_inches=0)
+    buf = io.BytesIO()
+    try:
+        plt.savefig(buf, format='png', transparent=True, pad_inches=0)
+    finally:
         plt.close(fig)
 
-        # Save as PNG
-        buf.seek(0)
-        img = Image.open(buf)
-        img = img.resize((SlippyTileGenerator.TILE_SIZE,
-                         SlippyTileGenerator.TILE_SIZE), Image.LANCZOS)
-        img.save(tile_path)
-        buf.close()
+    buf.seek(0)
+    img = Image.open(buf)
+    img = img.resize((TILE_SIZE, TILE_SIZE), Image.LANCZOS)
+    img.save(tile_path)
+    buf.close()
 
 
 def cruise_tiles(da, tile_base, cmap="viridis", levels=None, vmin=None, vmax=None, verbose=True):
@@ -422,12 +400,14 @@ def cruise_tiles(da, tile_base, cmap="viridis", levels=None, vmin=None, vmax=Non
         min_lon=float(da.longitude.min()),
         max_lon=float(da.longitude.max())
     )
-    generator.generate_tiles(np.squeeze(da.data),
-                             da.latitude.data,
-                             da.longitude.data,
-                             tile_base,
-                             settings["zoom_levels"],
-                             cmap=cmap,
-                             levels=levels,
-                             vmin=vmin,
-                             vmax=vmax)
+    generator.generate_tiles(
+        np.squeeze(da.data),
+        da.latitude.data,
+        da.longitude.data,
+        tile_base,
+        settings.get("zoom_levels", [3, 4, 5, 6, 7]),
+        cmap=cmap,
+        levels=levels,
+        vmin=vmin,
+        vmax=vmax
+    )

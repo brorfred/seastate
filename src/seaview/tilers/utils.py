@@ -6,6 +6,31 @@ contour data during tile generation.
 import numpy as np
 import matplotlib
 from matplotlib.path import Path
+from typing import Tuple, Optional, List
+from pyproj import Transformer
+
+
+# Web Mercator transformer (lon/lat to x/y meters)
+_transformer_to_webmerc = Transformer.from_crs(
+    "EPSG:4326", "EPSG:3857", always_xy=True
+)
+def lonlat_to_webmercator(lons: np.ndarray, lats: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """Transform longitude/latitude arrays to Web Mercator coordinates.
+
+    Parameters
+    ----------
+    lons : numpy.ndarray
+        Longitude values in degrees.
+    lats : numpy.ndarray
+        Latitude values in degrees.
+
+    Returns
+    -------
+    tuple of numpy.ndarray
+        (x, y) coordinates in Web Mercator meters.
+    """
+    x, y = _transformer_to_webmerc.transform(lons, lats)
+    return x.astype(np.float32), y.astype(np.float32)
 
 
 def filter_small_contours(cs, min_vertices=5):
