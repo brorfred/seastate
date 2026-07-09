@@ -8,41 +8,39 @@ remote_sync = true
 remote_url = "https://cruise.bror.co/"
 max_tile_days = 8
 updated_tiles = ["globcolour",  "ostia", "ssh"]
-[default.bathy]
-    vmin=-6000
-    vmax=0
-    levels = 61
 
-[default.ssh]
-    vmin = -0.75
-    vmax = 0.75
-    levels = 20
-    cmap="RdBu"
-[default.ostia]
-    vmin = 10
-    vmax = 28
-    levels = 20
-    cmap="viridis"
-[default.globcolour]
-    vmin = -4.6
-    vmax = 4.6
-    levels = 50
-    cmap="nipy_spectral"
-#
-# --- Cruise Specific Information ---
-#
 cruise_name = "bioreactors1"
 lat1 = -55
 lat2 = -10
 lon1 = -75
 lon2 = -5
 zoom_levels = [0,1,2,3,4,5,6,7,8,9]
-#
-# --- Directories for data ---
-#
 data_dir = "@format {this.base_data_dir}/{this.cruise_name}"
 tile_dir = "@format {this.base_tile_dir}/{this.cruise_name}"
 remote_tile_dir = "@format {this.remote_html_dir}/tiles/{this.cruise_name}"
+
+[default.bathy]
+    vmin=-6000
+    vmax=0
+    levels = 61
+[default.ssh]
+    vmin = -0.75
+    vmax = 0.75
+    levels = 20
+    cmap="matplotlib:RdBu_r"
+[default.ostia]
+    vmin = 10
+    vmax = 35
+    levels = 20
+    cmap="tol:rainbow_WhBr"
+[default.globcolour]
+    vmin = -4.6
+    vmax = 4.6
+    levels = 50
+    cmap="matplotlib:nipy_spectral"
+#
+# --- Directories for data ---
+#
 
 [subsea]
 cruise_name = "SubSea"
@@ -51,12 +49,6 @@ lat2 = -10
 lon1 = -75
 lon2 = -5
 zoom_levels = [0,1,2,3,4,5,6,7,8,9,10]
-#
-# --- Directories for data ---
-#
-data_dir = "@format {this.base_data_dir}/{this.cruise_name}"
-tile_dir = "@format {this.base_tile_dir}/{this.cruise_name}"
-remote_tile_dir = "@format {this.remote_html_dir}/tiles/{this.cruise_name}"
 [subsea.ssh]
     dynaconf_merge = true
     vmin = -0.25
@@ -67,19 +59,26 @@ remote_tile_dir = "@format {this.remote_html_dir}/tiles/{this.cruise_name}"
     vmax = 30
     cmap="gist_rainbow_r"
 
-[OMI]
+[omi]
 cruise_name = "OceanMargins"
 lat1 = -10
 lat2 =  10
 lon1 = -15
 lon2 =  12
 zoom_levels = [0,1,2,3,4,5,6,7,8,9,10]
-#
-# --- Directories for data ---
-#
-data_dir = "@format {this.base_data_dir}/{this.cruise_name}"
-tile_dir = "@format {this.base_tile_dir}/{this.cruise_name}"
-remote_tile_dir = "@format {this.remote_html_dir}/tiles/{this.cruise_name}"
-[OMI.contour_levels]
-    ssh = [-0.75, -0.65, -0.55, -0.45, -0.35, -0.25, -0.15, -0.05,
-           0.05, 0.15,  0.25,  0.35,  0.45,  0.55,  0.65,  0.75]
+[omi.ssh]
+    dynaconf_merge = true
+    vmin = -0.25
+    vmax =  0.25
+
+[ecoa]
+cruise_name = "ECOA"
+lat1 = 24
+lat2 =  44
+lon1 = -82.5
+lon2 =  -60
+zoom_levels = [0,1,2,3,4,5,6,7,8]
+[ecoa.ssh]
+    dynaconf_merge = true
+    vmin = -0.25
+    vmax =  0.25

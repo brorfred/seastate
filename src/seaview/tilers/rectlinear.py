@@ -21,6 +21,7 @@ import mercantile
 import io
 from pyproj import Transformer
 from tqdm import tqdm
+import cmap as cmap_extended
 
 from .utils import filter_small_contours
 from ..utils import vprint
@@ -343,6 +344,7 @@ def _generate_single_tile(
 
         if not np.iterable(levels):
             levels = np.linspace(vmin, vmax, levels)
+            cmap = cmap_extended.Colormap(cmap).to_matplotlib()
         ax.tricontourf(triang, tile_data, levels=levels,
                        cmap=cmap, vmin=vmin, vmax=vmax, extend='both')
 
